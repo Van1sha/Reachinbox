@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: reachinbox-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: http://localhost:3000
+      - key: WORKER_CONCURRENCY
+        value: "5"
+      - key: LIMITER_DURATION_MS
+        value: "2000"
+      - key: MAX_JOBS_PER_DURATION
+        value: "2"
+      - key: MAX_EMAILS_PER_HOUR
+        value: "200"
+      - key: MAX_EMAILS_PER_HOUR_PER_SENDER
+        value: "100"
+      - key: BASE_RETRY_DELAY_MS
+        value: "30000"
+      - key: MAX_RETRY_DELAY_MS
+        value: "1800000"
+      - key: JITTER_MS
+        value: "10000"
+      - key: MAX_RETRY_ATTEMPTS
+        value: "5"
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
