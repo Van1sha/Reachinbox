@@ -56,7 +56,7 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
     if (emailJob) {
       emailJob.status = 'sending';
       await jobRepo.save(emailJob);
-      sseEmitter.emit('job:sending', { jobId: emailJob.id, campaignId, recipientEmail });
+      sseEmitter.emit('job:sending', { jobId: emailJob.id, campaignId, recipientEmail, status: 'sending' });
     }
 
     // Check rate limit atomically (Redis-backed)
@@ -83,6 +83,7 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
           jobId: emailJob.id,
           campaignId,
           recipientEmail,
+          status: 'scheduled',
           newEstimatedTime: nextHour,
           reason: 'rate_limit',
         });
@@ -150,6 +151,7 @@ async function processEmailJob(job: Job<EmailJobData>): Promise<void> {
       jobId: emailJob?.id,
       campaignId,
       recipientEmail,
+      status: 'sent',
       sentAt: new Date().toISOString(),
       previewUrl: result.previewUrl,
     });
@@ -206,6 +208,7 @@ export function startWorker() {
         jobId: emailJob.id,
         campaignId,
         recipientEmail,
+        status: 'retrying',
         retryCount: attempt,
         nextRetryAt: emailJob.nextRetryAt,
         delayMs: delay,
@@ -233,6 +236,7 @@ export function startWorker() {
         jobId: emailJob?.id,
         campaignId,
         recipientEmail,
+        status: 'failed',
         error: err.message,
       });
     }

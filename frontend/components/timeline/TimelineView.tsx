@@ -69,7 +69,7 @@ function TimelineItem({ job, isNew }: TimelineItemProps) {
     failed: { icon: '❌', pulse: false },
     retrying: { icon: '🔄', pulse: true },
   };
-  const cfg = statusConfig[job.status];
+  const cfg = (job?.status && statusConfig[job.status]) || statusConfig.scheduled;
 
   return (
     <div
@@ -216,13 +216,25 @@ export default function TimelineView({ campaignId }: TimelineViewProps) {
           });
         }, 2000);
 
+        const eventStatus: EmailJobStatus =
+          data.status ||
+          (event.type === 'job:sending'
+            ? 'sending'
+            : event.type === 'job:rescheduled'
+            ? 'scheduled'
+            : event.type === 'job:retrying'
+            ? 'retrying'
+            : event.type === 'job:failed'
+            ? 'failed'
+            : 'scheduled');
+
         // Update job status in-place
         setJobs((prev) =>
           prev.map((j) => {
             if (j.id === data.jobId) {
               return {
                 ...j,
-                status: data.status,
+                status: eventStatus,
                 ...(data.newEstimatedTime ? { estimatedSendTime: data.newEstimatedTime } : {}),
                 ...(data.nextRetryAt ? { nextRetryAt: data.nextRetryAt, retryCount: data.retryCount ?? j.retryCount } : {}),
               };

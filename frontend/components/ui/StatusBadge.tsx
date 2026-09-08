@@ -11,7 +11,7 @@ interface StatusBadgeProps {
 }
 
 export default function StatusBadge({ status, showDot = true, animate = true }: StatusBadgeProps) {
-  const config = STATUS_CONFIG[status];
+  const config = (status && STATUS_CONFIG[status]) || STATUS_CONFIG.scheduled;
 
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.color}`}>

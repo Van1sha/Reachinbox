@@ -3,17 +3,15 @@ import { AppDataSource } from '../config/database';
 import { Campaign } from '../models/Campaign';
 import { EmailJob } from '../models/EmailJob';
 import { requireAuth } from '../middleware/auth';
-import { rateLimiter } from '../services/RateLimiter';
 import { emailQueue } from '../queues/emailQueue';
-import { AppDataSource as DS } from '../config/database';
 
 const router = Router();
 
 // GET /api/stats — Dashboard stats
 router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
-    const campaignRepo = DS.getRepository(Campaign);
-    const jobRepo = DS.getRepository(EmailJob);
+    const campaignRepo = AppDataSource.getRepository(Campaign);
+    const jobRepo = AppDataSource.getRepository(EmailJob);
 
     const [totalCampaigns, scheduledCampaigns, completedCampaigns] = await Promise.all([
       campaignRepo.count(),
