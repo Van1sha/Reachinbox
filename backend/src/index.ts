@@ -11,7 +11,7 @@ import RedisStore from 'connect-redis';
 import passport from 'passport';
 
 import { AppDataSource } from './config/database';
-import { redisClient } from './config/redis';
+import { redisClient, sanitizeRedisUrl } from './config/redis';
 import { setupPassport } from './config/passport';
 import { emailQueue } from './queues/emailQueue';
 import { startWorker } from './workers/emailWorker';
@@ -27,6 +27,10 @@ import eventsRoutes from './routes/events';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security & Parsing
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(morgan('dev'));
@@ -40,7 +44,7 @@ app.use(cors({
 }));
 
 // Session with Redis store (using ioredis)
-const sessionRedis = new IoRedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+const sessionRedis = new IoRedis(sanitizeRedisUrl(process.env.REDIS_URL), {
   maxRetriesPerRequest: null,
 });
 
@@ -52,6 +56,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
 }));

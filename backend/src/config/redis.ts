@@ -1,7 +1,25 @@
 import 'dotenv/config';
 import { Redis } from 'ioredis';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+export function sanitizeRedisUrl(raw?: string): string {
+  if (!raw) return 'redis://localhost:6379';
+  let cleaned = raw.trim();
+
+  // If user pasted a CLI command (e.g. "redis-cli --tls -u rediss://...")
+  const urlMatch = cleaned.match(/(rediss?:\/\/[^\s'"]+)/);
+  if (urlMatch) {
+    cleaned = urlMatch[1];
+  }
+
+  // If connected to Upstash without rediss:// protocol, ensure TLS
+  if (cleaned.includes('upstash.io') && cleaned.startsWith('redis://')) {
+    cleaned = cleaned.replace('redis://', 'rediss://');
+  }
+
+  return cleaned;
+}
+
+const redisUrl = sanitizeRedisUrl(process.env.REDIS_URL);
 
 export const redisClient = new Redis(redisUrl, {
   maxRetriesPerRequest: null, // Required for BullMQ
