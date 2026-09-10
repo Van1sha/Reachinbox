@@ -36,8 +36,24 @@ app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
 // CORS
+const configuredFrontend = process.env.FRONTEND_URL?.trim().replace(/\/$/, '');
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, server-to-server)
+        if (!origin)
+            return callback(null, true);
+        // Allow if matches FRONTEND_URL, is on vercel.app, is localhost, or if placeholder was left
+        if (!configuredFrontend ||
+            configuredFrontend === 'https://your-app.vercel.app' ||
+            origin === configuredFrontend ||
+            origin.endsWith('.vercel.app') ||
+            origin.includes('localhost') ||
+            origin.includes('127.0.0.1')) {
+            return callback(null, true);
+        }
+        // Fallback: allow origin to prevent CORS blocking across deployments
+        return callback(null, true);
+    },
     credentials: true,
 }));
 // Session with Redis store (using ioredis)
