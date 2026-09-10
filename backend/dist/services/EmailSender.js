@@ -92,10 +92,15 @@ async function sendViaResendApi(apiKey, options) {
 }
 async function sendViaBrevoApi(apiKey, options) {
     const { sender, to, subject, html } = options;
+    // Brevo strictly requires the sender email to be verified on the Brevo account.
+    // Fall back to SMTP_USER or BREVO_FROM_EMAIL if the sender in the DB is a dummy demo email.
+    const fallbackEmail = process.env.BREVO_FROM_EMAIL || process.env.SMTP_USER || 'vanisha9897@gmail.com';
+    const isDummyEmail = !sender.email || sender.email.includes('reachinbox.com') || sender.email.includes('ethereal');
+    const senderEmail = (isDummyEmail && fallbackEmail) ? fallbackEmail : (sender.email || fallbackEmail);
     const payload = {
         sender: {
-            name: sender.name,
-            email: sender.email,
+            name: sender.name || 'ReachInbox',
+            email: senderEmail,
         },
         to: [{ email: to }],
         subject,
