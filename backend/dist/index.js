@@ -19,6 +19,7 @@ const passport_2 = require("./config/passport");
 const emailQueue_1 = require("./queues/emailQueue");
 const emailWorker_1 = require("./workers/emailWorker");
 const bullboard_1 = require("./config/bullboard");
+const Sender_1 = require("./models/Sender");
 const auth_1 = __importDefault(require("./routes/auth"));
 const campaigns_1 = __importDefault(require("./routes/campaigns"));
 const jobs_1 = __importDefault(require("./routes/jobs"));
@@ -99,6 +100,37 @@ async function bootstrap() {
         // Run migrations/sync
         await database_1.AppDataSource.synchronize();
         console.log('✅ Database schema synchronized');
+        // Auto-update legacy/Ethereal senders in PostgreSQL to working credentials
+        try {
+            const senderRepo = database_1.AppDataSource.getRepository(Sender_1.Sender);
+            const isBrevoConfigured = Boolean(process.env.BREVO_API_KEY);
+            const isResendConfigured = Boolean(process.env.RESEND_API_KEY);
+            const defaultUser = process.env.SMTP_USER || (isBrevoConfigured ? 'vanisha9897@gmail.com' : '');
+            const defaultPass = process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SMTP_PASS || '';
+            const defaultHost = isBrevoConfigured ? 'smtp-relay.brevo.com' : (isResendConfigured ? 'smtp.resend.com' : (process.env.SMTP_HOST || 'smtp.gmail.com'));
+            const defaultPort = (isBrevoConfigured || isResendConfigured) ? 465 : parseInt(process.env.SMTP_PORT || '465');
+            const defaultSecure = (isBrevoConfigured || isResendConfigured) ? true : (process.env.SMTP_SECURE !== 'false');
+            if (defaultPass) {
+                await senderRepo
+                    .createQueryBuilder()
+                    .update(Sender_1.Sender)
+                    .set({
+                    smtpHost: defaultHost,
+                    smtpPort: defaultPort,
+                    smtpSecure: defaultSecure,
+                    smtpUser: defaultUser,
+                    smtpPass: defaultPass,
+                })
+                    .where("smtp_host LIKE :ethereal OR smtp_host IS NULL OR smtp_pass IS NULL OR smtp_pass = ''", {
+                    ethereal: '%ethereal%',
+                })
+                    .execute();
+                console.log('✅ Auto-synced legacy Ethereal senders to working SMTP/API credentials');
+            }
+        }
+        catch (e) {
+            console.warn('⚠️ Could not auto-sync legacy senders:', e);
+        }
         // Connect to Redis
         await redis_1.redisClient.ping();
         console.log('✅ Redis connected');

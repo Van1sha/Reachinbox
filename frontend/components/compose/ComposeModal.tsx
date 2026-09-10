@@ -104,7 +104,10 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
     if (isOpen) {
       sendersApi.list().then((r) => {
         setSenders(r.senders);
-        if (r.senders.length > 0 && !senderId) setSenderId(r.senders[0].id);
+        if (r.senders.length > 0 && !senderId) {
+          const nonEthereal = r.senders.find((s) => !s.smtpHost?.includes('ethereal'));
+          setSenderId((nonEthereal || r.senders[0]).id);
+        }
       }).catch(() => {});
     }
   }, [isOpen]);
@@ -336,9 +339,14 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
                   onChange={(e) => setSenderId(e.target.value)}
                   className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 text-sm text-gray-100 focus:outline-none focus:border-indigo-500"
                 >
-                  {senders.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.email}) — limit: {s.hourlyLimit}/hr</option>
-                  ))}
+                  {senders.map((s) => {
+                    const isEthereal = s.smtpHost?.includes('ethereal');
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.email}) — {s.smtpHost?.replace('smtp-relay.', '').replace('smtp.', '') || 'SMTP'} {isEthereal ? '⚠️ (Render Blocks Port 587)' : `(${s.hourlyLimit}/hr)`}
+                      </option>
+                    );
+                  })}
                 </select>
               )}
 

@@ -140,8 +140,27 @@ async function sendEmail(options) {
     const resendKey = isResendSender
         ? (pass?.startsWith('re_') ? pass : (process.env.RESEND_API_KEY || (sender.smtpHost === 'smtp.resend.com' ? pass : null)))
         : null;
-    if (resendKey) {
-        return sendViaResendApi(resendKey, options);
+    // If sender is an Ethereal sender, redirect it to any working HTTP API or env SMTP
+    if (sender.smtpHost?.includes('ethereal')) {
+        if (process.env.BREVO_API_KEY) {
+            return sendViaBrevoApi(process.env.BREVO_API_KEY, options);
+        }
+        if (process.env.RESEND_API_KEY) {
+            return sendViaResendApi(process.env.RESEND_API_KEY, options);
+        }
+        if (process.env.SMTP_PASS) {
+            sender.smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+            sender.smtpPort = parseInt(process.env.SMTP_PORT || '465');
+            sender.smtpSecure = process.env.SMTP_SECURE !== 'false';
+            sender.smtpUser = process.env.SMTP_USER || sender.email;
+            sender.smtpPass = process.env.SMTP_PASS;
+        }
+        else {
+            const isCloud = Boolean(process.env.RENDER || process.env.NODE_ENV === 'production');
+            if (isCloud) {
+                throw new Error('Demo Ethereal sender cannot connect on Render because Render blocks port 587. Please add your Brevo API key (BREVO_API_KEY) in Render Dashboard or add a Brevo sender in Compose.');
+            }
+        }
     }
     const transport = getTransport(sender);
     let info;

@@ -88,9 +88,32 @@ async function processEmailJob(job) {
             return; // Mark current job as complete (the rescheduled one will handle it)
         }
         // Fetch sender
-        const sender = await senderRepo.findOne({ where: { id: senderId } });
+        let sender = await senderRepo.findOne({ where: { id: senderId } });
         if (!sender)
             throw new bullmq_1.UnrecoverableError(`Sender ${senderId} not found`);
+        // If this sender is an old Ethereal test sender, upgrade it to an active real sender
+        if (sender.smtpHost?.includes('ethereal')) {
+            const activeSender = await senderRepo
+                .createQueryBuilder('s')
+                .where("s.smtp_host NOT LIKE '%ethereal%' AND s.smtp_pass IS NOT NULL AND s.smtp_pass != ''")
+                .getOne();
+            if (activeSender) {
+                sender = activeSender;
+            }
+            else if (process.env.BREVO_API_KEY) {
+                sender.smtpHost = 'smtp-relay.brevo.com';
+                sender.smtpPass = process.env.BREVO_API_KEY;
+                sender.smtpPort = 465;
+                sender.smtpSecure = true;
+            }
+            else if (process.env.SMTP_PASS) {
+                sender.smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+                sender.smtpPort = parseInt(process.env.SMTP_PORT || '465');
+                sender.smtpSecure = process.env.SMTP_SECURE !== 'false';
+                sender.smtpUser = process.env.SMTP_USER || sender.email;
+                sender.smtpPass = process.env.SMTP_PASS;
+            }
+        }
         // Send email via Ethereal SMTP
         const result = await (0, EmailSender_1.sendEmail)({
             sender,
