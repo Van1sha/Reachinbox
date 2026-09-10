@@ -361,6 +361,18 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
                       <button
                         type="button"
                         onClick={() => {
+                          setNewSenderHost('smtp-relay.brevo.com');
+                          setNewSenderPort(465);
+                          setNewSenderSecure(true);
+                          setNewSenderUser(newSenderEmail || '');
+                        }}
+                        className="text-[11px] px-2 py-0.5 rounded bg-emerald-900/50 hover:bg-emerald-800/60 text-emerald-300 border border-emerald-700/50 font-medium"
+                      >
+                        Brevo (Render Free)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           setNewSenderHost('smtp.resend.com');
                           setNewSenderPort(465);
                           setNewSenderSecure(true);
@@ -368,14 +380,14 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
                         }}
                         className="text-[11px] px-2 py-0.5 rounded bg-indigo-900/50 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 font-medium"
                       >
-                        Resend (Render Free)
+                        Resend
                       </button>
                       <button
                         type="button"
                         onClick={() => {
                           setNewSenderHost('smtp.gmail.com');
-                          setNewSenderPort(587);
-                          setNewSenderSecure(false);
+                          setNewSenderPort(465);
+                          setNewSenderSecure(true);
                           setNewSenderUser('');
                         }}
                         className="text-[11px] px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 font-medium"
@@ -386,7 +398,7 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
                   </div>
 
                   <p className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 leading-relaxed">
-                    💡 <strong>Render Free Tier Notice:</strong> Render blocks outbound SMTP ports (587, 465, 25). To avoid <code className="text-amber-200">Connection timeout</code>, click <strong>Resend</strong> and enter your Resend API Key (<code className="text-amber-200">re_...</code>) as the password — it automatically sends via HTTPS (Port 443).
+                    💡 <strong>Render Free Tier Notice:</strong> Render blocks standard SMTP ports (587, 465, 25). To send emails reliably on Render Free, click <strong>Brevo (Render Free)</strong> and paste your Brevo API key (<code className="text-amber-200">xkeysib-...</code>) as the password — it sends securely via HTTPS (Port 443) and doesn't require a custom domain.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>

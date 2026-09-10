@@ -116,10 +116,65 @@ async function sendViaResendApi(
   };
 }
 
+async function sendViaBrevoApi(
+  apiKey: string,
+  options: SendEmailOptions
+): Promise<SendEmailResult> {
+  const { sender, to, subject, html } = options;
+
+  const payload = {
+    sender: {
+      name: sender.name,
+      email: sender.email,
+    },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await res.json()) as any;
+
+  if (!res.ok) {
+    throw new Error(
+      data?.message || `Brevo API error (${res.status}): ${JSON.stringify(data)}`
+    );
+  }
+
+  return {
+    messageId: data.messageId || 'brevo-' + Date.now(),
+    previewUrl: false,
+  };
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<SendEmailResult> {
   const { sender, to, subject, html } = options;
   const user = sender.smtpUser || sender.etherealUser;
   const pass = sender.smtpPass || sender.etherealPass;
+
+  // Check if Brevo HTTP API should be used (HTTPS port 443 — works on Render Free tier)
+  const isBrevoSender =
+    sender.smtpHost === 'smtp-relay.brevo.com' ||
+    sender.smtpHost === 'smtp.brevo.com' ||
+    (pass?.startsWith('xkeysib-') ?? false) ||
+    Boolean(process.env.BREVO_API_KEY && (sender.smtpHost?.includes('brevo') || !sender.smtpHost));
+
+  const brevoKey = isBrevoSender
+    ? (pass?.startsWith('xkeysib-') ? pass : (process.env.BREVO_API_KEY || pass))
+    : null;
+
+  if (brevoKey) {
+    return sendViaBrevoApi(brevoKey, options);
+  }
 
   // Check if Resend HTTP API should be used (HTTPS port 443 — bypasses cloud SMTP port blocks)
   const isResendSender =
