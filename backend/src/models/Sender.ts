@@ -19,13 +19,22 @@ export class Sender {
   @Column({ unique: true, length: 255 })
   email!: string;
 
-  @Column({ name: 'ethereal_user', length: 255 })
+  // Legacy Ethereal columns — kept for backward compatibility with existing rows.
+  // New rows should use smtpUser / smtpPass instead.
+  @Column({ name: 'ethereal_user', length: 255, nullable: true, default: null })
   etherealUser!: string;
 
-  @Column({ name: 'ethereal_pass', length: 255 })
+  @Column({ name: 'ethereal_pass', length: 255, nullable: true, default: null })
   etherealPass!: string;
 
-  @Column({ name: 'smtp_host', length: 255, default: 'smtp.ethereal.email' })
+  // Real SMTP credentials. When set these take precedence over etherealUser/Pass.
+  @Column({ name: 'smtp_user', length: 255, nullable: true, default: null })
+  smtpUser!: string;
+
+  @Column({ name: 'smtp_pass', length: 255, nullable: true, default: null })
+  smtpPass!: string;
+
+  @Column({ name: 'smtp_host', length: 255, default: 'smtp.gmail.com' })
   smtpHost!: string;
 
   @Column({ name: 'smtp_port', default: 587 })

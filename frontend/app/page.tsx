@@ -8,6 +8,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [particles, setParticles] = useState<Array<{ x: number; y: number; delay: number; size: number }>>([]);
 
   useEffect(() => {
@@ -32,11 +33,14 @@ export default function LoginPage() {
 
   const handleDevLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
       await authApi.devLogin();
       router.push('/dashboard');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Dev login failed:', e);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      setError(`Login failed: ${e?.message || 'Unknown error'}. API: ${apiUrl}`);
     } finally {
       setLoading(false);
     }
@@ -103,6 +107,13 @@ export default function LoginPage() {
           <h2 className="text-xl font-semibold text-white mb-2">Welcome back</h2>
           <p className="text-gray-400 text-sm mb-8">Sign in to access your email scheduling dashboard</p>
 
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm break-all">
+              {error}
+            </div>
+          )}
 
           {/* Login Button */}
           <button

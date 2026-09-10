@@ -99,14 +99,32 @@ async function bootstrap() {
     console.log('✅ Redis connected');
 
     // Start BullMQ Worker
-    startWorker();
+    const worker = startWorker();
     console.log('✅ BullMQ worker started');
 
     // Start server
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running at http://localhost:${PORT}`);
       console.log(`📊 Bull Board at http://localhost:${PORT}/admin/queues`);
     });
+
+    // Graceful shutdown — give in-flight jobs a chance to finish before exit.
+    // Without this, a SIGTERM from a deploy/restart can orphan active BullMQ
+    // jobs, leaving them stuck in "active" state and blocking future retries.
+    const shutdown = async (signal: string) => {
+      console.log(`\n⚠️  ${signal} received — shutting down gracefully…`);
+      server.close();
+      try {
+        await worker.close();
+        console.log('✅ BullMQ worker closed');
+      } catch (err) {
+        console.error('❌ Error closing worker:', err);
+      }
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT',  () => shutdown('SIGINT'));
   } catch (error) {
     console.error('❌ Bootstrap failed:', error);
     process.exit(1);

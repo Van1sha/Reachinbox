@@ -28,15 +28,23 @@ __decorate([
     __metadata("design:type", String)
 ], Sender.prototype, "email", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'ethereal_user', length: 255 }),
+    (0, typeorm_1.Column)({ name: 'ethereal_user', length: 255, nullable: true, default: null }),
     __metadata("design:type", String)
 ], Sender.prototype, "etherealUser", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'ethereal_pass', length: 255 }),
+    (0, typeorm_1.Column)({ name: 'ethereal_pass', length: 255, nullable: true, default: null }),
     __metadata("design:type", String)
 ], Sender.prototype, "etherealPass", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ name: 'smtp_host', length: 255, default: 'smtp.ethereal.email' }),
+    (0, typeorm_1.Column)({ name: 'smtp_user', length: 255, nullable: true, default: null }),
+    __metadata("design:type", String)
+], Sender.prototype, "smtpUser", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'smtp_pass', length: 255, nullable: true, default: null }),
+    __metadata("design:type", String)
+], Sender.prototype, "smtpPass", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ name: 'smtp_host', length: 255, default: 'smtp.gmail.com' }),
     __metadata("design:type", String)
 ], Sender.prototype, "smtpHost", void 0);
 __decorate([

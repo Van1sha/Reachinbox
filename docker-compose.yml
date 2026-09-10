@@ -1,6 +1,8 @@
 version: '3.9'
 
 services:
+  # ── Infrastructure ───────────────────────────────────────────────────────────
+
   postgres:
     image: postgres:16-alpine
     container_name: reachinbox_postgres
@@ -33,6 +35,80 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ── Backend ──────────────────────────────────────────────────────────────────
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: reachinbox_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '4000:4000'
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+
+      # Database — uses the service name 'postgres' as the host inside Docker
+      DATABASE_URL: postgresql://reachinbox:reachinbox_secret@postgres:5432/reachinbox_db
+
+      # Redis — uses the service name 'redis' as the host inside Docker
+      REDIS_URL: redis://redis:6379
+
+      # Session
+      SESSION_SECRET: change_this_to_a_random_32_char_string
+
+      # Google OAuth — fill in your real values
+      GOOGLE_CLIENT_ID: your_google_client_id_here
+      GOOGLE_CLIENT_SECRET: your_google_client_secret_here
+      GOOGLE_CALLBACK_URL: http://localhost:4000/api/auth/google/callback
+
+      # Frontend origin for CORS
+      FRONTEND_URL: http://localhost:3000
+
+      # ── SMTP (Resend) ──────────────────────────────────────────────────────
+      # Paste your Resend API key as SMTP_PASS.
+      # Sign up free at https://resend.com → API Keys → Create API Key
+      SMTP_HOST: smtp.resend.com
+      SMTP_PORT: '465'
+      SMTP_SECURE: 'true'
+      SMTP_USER: resend
+      SMTP_PASS: re_your_resend_api_key_here   # ← replace this
+
+      # Worker tuning
+      WORKER_CONCURRENCY: '5'
+      LIMITER_DURATION_MS: '2000'
+      MAX_JOBS_PER_DURATION: '2'
+      MAX_EMAILS_PER_HOUR: '200'
+      MAX_EMAILS_PER_HOUR_PER_SENDER: '100'
+      BASE_RETRY_DELAY_MS: '30000'
+      MAX_RETRY_DELAY_MS: '1800000'
+      JITTER_MS: '10000'
+      MAX_RETRY_ATTEMPTS: '5'
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked in at build time so Next.js can inline it in the browser bundle
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    container_name: reachinbox_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '3000:3000'
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
 
 volumes:
   postgres_data:

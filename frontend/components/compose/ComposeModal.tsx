@@ -44,7 +44,7 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
 
   const handleAddSender = async () => {
     if (!newSenderName || !newSenderEmail || !newSenderPass) {
-      showToast('Name, Email, and Password / App Password are required', 'error');
+      showToast('Name, Email, and Password / API Key are required', 'error');
       return;
     }
     setAddingSender(true);
@@ -52,6 +52,8 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
       const response = await sendersApi.create({
         name: newSenderName,
         email: newSenderEmail,
+        smtpUser: newSenderUser || newSenderEmail,
+        smtpPass: newSenderPass,
         etherealUser: newSenderUser || newSenderEmail,
         etherealPass: newSenderPass,
         smtpHost: newSenderHost,
@@ -62,7 +64,7 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
       const newSender = response.sender;
       setSenders((prev) => [newSender, ...prev]);
       setSenderId(newSender.id);
-      showToast('Custom SMTP Sender added successfully!', 'success');
+      showToast('Custom Sender added successfully!', 'success');
       // Reset form
       setNewSenderName('');
       setNewSenderEmail('');
@@ -350,7 +352,40 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
 
               {showAddSender && (
                 <div className="mt-3 p-4 rounded-xl bg-gray-900/50 border border-gray-800 space-y-3">
-                  <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">New Custom Sender Settings</h4>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">New Custom Sender Settings</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-gray-500">Presets:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewSenderHost('smtp.resend.com');
+                          setNewSenderPort(465);
+                          setNewSenderSecure(true);
+                          setNewSenderUser('resend');
+                        }}
+                        className="text-[11px] px-2 py-0.5 rounded bg-indigo-900/50 hover:bg-indigo-800/60 text-indigo-300 border border-indigo-700/50 font-medium"
+                      >
+                        Resend (Render Free)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewSenderHost('smtp.gmail.com');
+                          setNewSenderPort(587);
+                          setNewSenderSecure(false);
+                          setNewSenderUser('');
+                        }}
+                        className="text-[11px] px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 font-medium"
+                      >
+                        Gmail
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 leading-relaxed">
+                    💡 <strong>Render Free Tier Notice:</strong> Render blocks outbound SMTP ports (587, 465, 25). To avoid <code className="text-amber-200">Connection timeout</code>, click <strong>Resend</strong> and enter your Resend API Key (<code className="text-amber-200">re_...</code>) as the password — it automatically sends via HTTPS (Port 443).
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] text-gray-400 mb-1">Display Name</label>
