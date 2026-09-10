@@ -51,54 +51,64 @@ async function sendViaResendApi(
 ): Promise<SendEmailResult> {
   const { sender, to, subject, html } = options;
 
-  // Resend testing sandbox requires sending from onboarding@resend.dev unless a custom domain is verified.
-  // Public domains (@gmail.com, etc.) cannot be used directly in the from address.
+  // Resend free tier strictly requires sending from onboarding@resend.dev
+  // unless a custom domain has been verified via DNS on resend.com.
   const configuredFrom = process.env.RESEND_FROM_EMAIL;
   let fromAddress: string;
   if (configuredFrom) {
     fromAddress = configuredFrom;
   } else if (sender.email.endsWith('@resend.dev') || sender.email.endsWith('.resend.dev')) {
     fromAddress = `"${sender.name}" <${sender.email}>`;
-  } else if (
-    sender.email.endsWith('@gmail.com') ||
-    sender.email.endsWith('@yahoo.com') ||
-    sender.email.endsWith('@outlook.com') ||
-    sender.email.endsWith('@hotmail.com')
-  ) {
-    fromAddress = `"${sender.name}" <onboarding@resend.dev>`;
   } else {
-    fromAddress = `"${sender.name}" <${sender.email}>`;
+    fromAddress = `"${sender.name}" <onboarding@resend.dev>`;
   }
 
-  const payload: Record<string, any> = {
-    from: fromAddress,
-    to: [to],
-    subject,
-    html,
+  const sendWithFrom = async (from: string) => {
+    const payload: Record<string, any> = {
+      from,
+      to: [to],
+      subject,
+      html,
+    };
+
+    if (sender.email) {
+      payload.reply_to = sender.email;
+    }
+
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = (await res.json()) as any;
+    return { ok: res.ok, status: res.status, data };
   };
 
-  if (sender.email) {
-    payload.reply_to = sender.email;
+  let result = await sendWithFrom(fromAddress);
+
+  // If Resend failed because domain is not verified, automatically fallback to onboarding@resend.dev
+  const fallbackFrom = `"${sender.name}" <onboarding@resend.dev>`;
+  if (
+    !result.ok &&
+    result.data?.message?.toLowerCase().includes('not verified') &&
+    fromAddress !== fallbackFrom
+  ) {
+    console.log(`⚠️ Resend rejected domain (${fromAddress}). Retrying with onboarding@resend.dev...`);
+    result = await sendWithFrom(fallbackFrom);
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = (await res.json()) as any;
-  if (!res.ok) {
+  if (!result.ok) {
     throw new Error(
-      data.message || `Resend API error (${res.status}): ${JSON.stringify(data)}`
+      result.data?.message || `Resend API error (${result.status}): ${JSON.stringify(result.data)}`
     );
   }
 
   return {
-    messageId: data.id || 'resend-' + Date.now(),
+    messageId: result.data.id || 'resend-' + Date.now(),
     previewUrl: false,
   };
 }
