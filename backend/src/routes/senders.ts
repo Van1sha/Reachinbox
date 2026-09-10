@@ -55,12 +55,19 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
     const senderRepo = AppDataSource.getRepository(Sender);
 
     // Resolve SMTP credentials: request body → env var defaults
-    const smtpPass = data.smtpPass || data.etherealPass || DEFAULT_SMTP_PASS || process.env.RESEND_API_KEY || '';
-    const isResend = smtpPass.startsWith('re_') || data.smtpHost === 'smtp.resend.com' || Boolean(process.env.RESEND_API_KEY);
-    const smtpUser = data.smtpUser || data.etherealUser || DEFAULT_SMTP_USER || (isResend ? 'resend' : '');
+    const isExplicitResend = data.smtpHost === 'smtp.resend.com';
+    const isExplicitOtherHost = Boolean(data.smtpHost && data.smtpHost !== 'smtp.resend.com');
+
+    let smtpPass = data.smtpPass || data.etherealPass || DEFAULT_SMTP_PASS || (!isExplicitOtherHost ? process.env.RESEND_API_KEY : '') || '';
+    if (data.smtpHost?.includes('gmail') && smtpPass) {
+      smtpPass = smtpPass.replace(/\s+/g, '');
+    }
+
+    const isResend = !isExplicitOtherHost && (smtpPass.startsWith('re_') || isExplicitResend || Boolean(process.env.RESEND_API_KEY));
+    const smtpUser = data.smtpUser || data.etherealUser || (isResend ? 'resend' : DEFAULT_SMTP_USER);
     const smtpHost = data.smtpHost || (isResend ? 'smtp.resend.com' : DEFAULT_SMTP_HOST);
     const smtpPort = data.smtpPort || (isResend ? 465 : DEFAULT_SMTP_PORT);
-    const smtpSecure = data.smtpSecure ?? (isResend ? true : DEFAULT_SMTP_SECURE);
+    const smtpSecure = data.smtpSecure ?? (isResend ? true : (smtpPort === 465 ? true : DEFAULT_SMTP_SECURE));
 
     if (!smtpUser || !smtpPass) {
       return res.status(400).json({

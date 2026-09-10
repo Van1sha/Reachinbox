@@ -49,14 +49,16 @@ export default function ComposeModal({ isOpen, onClose, onSuccess }: ComposeModa
     }
     setAddingSender(true);
     try {
+      const cleanPass = newSenderPass.trim().replace(/\s+/g, '');
+      const cleanUser = (newSenderUser || newSenderEmail).trim();
       const response = await sendersApi.create({
-        name: newSenderName,
-        email: newSenderEmail,
-        smtpUser: newSenderUser || newSenderEmail,
-        smtpPass: newSenderPass,
-        etherealUser: newSenderUser || newSenderEmail,
-        etherealPass: newSenderPass,
-        smtpHost: newSenderHost,
+        name: newSenderName.trim(),
+        email: newSenderEmail.trim(),
+        smtpUser: cleanUser,
+        smtpPass: cleanPass,
+        etherealUser: cleanUser,
+        etherealPass: cleanPass,
+        smtpHost: newSenderHost.trim(),
         smtpPort: Number(newSenderPort),
         smtpSecure: newSenderSecure,
         hourlyLimit: Number(newSenderHourlyLimit),

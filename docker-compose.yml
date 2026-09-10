@@ -72,14 +72,12 @@ services:
       # Frontend origin for CORS
       FRONTEND_URL: http://localhost:3000
 
-      # ── SMTP (Resend) ──────────────────────────────────────────────────────
-      # Paste your Resend API key as SMTP_PASS.
-      # Sign up free at https://resend.com → API Keys → Create API Key
-      SMTP_HOST: smtp.resend.com
-      SMTP_PORT: '465'
-      SMTP_SECURE: 'true'
-      SMTP_USER: resend
-      SMTP_PASS: re_your_resend_api_key_here   # ← replace this
+      # ── SMTP (Gmail) ───────────────────────────────────────────────────────
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-vanisha9897@gmail.com}
+      SMTP_PASS: ${SMTP_PASS:-}
 
       # Worker tuning
       WORKER_CONCURRENCY: '5'

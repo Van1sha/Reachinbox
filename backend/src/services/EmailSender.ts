@@ -21,7 +21,10 @@ function createTransport(sender: Sender): nodemailer.Transporter {
   // Prefer the dedicated smtpUser/smtpPass fields; fall back to the legacy
   // etherealUser/etherealPass columns so existing rows keep working.
   const user = sender.smtpUser || sender.etherealUser;
-  const pass = sender.smtpPass || sender.etherealPass;
+  let pass = sender.smtpPass || sender.etherealPass;
+  if (pass && sender.smtpHost?.includes('gmail')) {
+    pass = pass.replace(/\s+/g, '');
+  }
 
   return nodemailer.createTransport({
     host: sender.smtpHost,
@@ -119,10 +122,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<SendEmailRes
   const pass = sender.smtpPass || sender.etherealPass;
 
   // Check if Resend HTTP API should be used (HTTPS port 443 — bypasses cloud SMTP port blocks)
-  const resendKey =
-    process.env.RESEND_API_KEY ||
-    (pass?.startsWith('re_') ? pass : null) ||
-    (sender.smtpHost === 'smtp.resend.com' ? pass : null);
+  const isResendSender =
+    sender.smtpHost === 'smtp.resend.com' ||
+    (pass?.startsWith('re_') ?? false);
+
+  const resendKey = isResendSender
+    ? (pass?.startsWith('re_') ? pass : (process.env.RESEND_API_KEY || (sender.smtpHost === 'smtp.resend.com' ? pass : null)))
+    : null;
 
   if (resendKey) {
     return sendViaResendApi(resendKey, options);
